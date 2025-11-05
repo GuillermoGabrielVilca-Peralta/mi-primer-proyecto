@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Permiso para el EMULADOR. Este no cambia.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+
+    <!--
+        Permiso para un TELÉFONO FÍSICO.
+
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">172.22.147.247</domain>
+    </domain-config>
+</network-security-config>
