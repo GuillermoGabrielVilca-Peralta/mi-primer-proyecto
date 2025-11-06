@@ -1,15 +1,29 @@
+gitignore
+# ===============================================
+#  Plantilla estándar de .gitignore para Android
+# ===============================================
+
+# Archivos de configuración de IDE y compiladores
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea/
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Archivos de registro y caché
+*.log
+
+# Paquetes de aplicaciones generados (APKs, AABs)
+*.apk
+*.aab
+
+# Archivos de keystore (¡MUY IMPORTANTE NUNCA SUBIRLOS!)
+*.jks
+*.keystore
+
+# Archivos de configuración de servicios de Google
+google-services.json
