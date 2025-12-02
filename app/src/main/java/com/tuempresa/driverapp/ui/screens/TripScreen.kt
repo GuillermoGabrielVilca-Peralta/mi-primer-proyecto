@@ -54,7 +54,18 @@ fun TripScreen(
             )
 
             // 8. EL BOTÓN SE MANTIENE
-            Button(onClick = onFinishTrip, modifier = Modifier.fillMaxWidth()) {
+            // 8. EL BOTÓN AHORA GUARDA EL VIAJE Y LUEGO NAVEGA
+            Button(
+                onClick = {
+                    // 👇 ¡AQUÍ ESTÁ EL CAMBIO CLAVE! 👇
+                    // Primero, le decimos al ViewModel que guarde el viaje.
+                    viewModel.finishTrip()
+
+                    // Después, ejecutamos la navegación para volver atrás.
+                    onFinishTrip()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Finalizar Viaje")
             }
         }

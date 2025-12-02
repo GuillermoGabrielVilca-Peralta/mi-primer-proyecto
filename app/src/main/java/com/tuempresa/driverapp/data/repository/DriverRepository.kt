@@ -1,29 +1,34 @@
+// ruta: app/src/main/java/com/tuempresa/driverapp/data/repository/DriverRepository.kt
 package com.tuempresa.driverapp.data.repository
 
-
-import com.tuempresa.driverapp.data.local.db.AppDatabase
 import com.tuempresa.driverapp.data.local.models.Trip
-import com.tuempresa.driverapp.data.remote.ApiService
-import com.tuempresa.driverapp.data.local.models.TripRemote
-import com.tuempresa.driverapp.data.local.models.TripResponse
-import javax.inject.Inject
+// 👇 1. IMPORTA LAS CLASES NECESARIAS
+import com.tuempresa.driverapp.data.local.models.TripEvent
+import kotlinx.coroutines.flow.Flow
 
-class DriverRepository @Inject constructor(
-    private val db: AppDatabase,
-    private val api: ApiService
-) {
-    suspend fun saveTripLocal(trip: Trip) = db.tripDao().insertTrip(trip)
+interface DriverRepository {
 
-    suspend fun uploadTripRemote(tripRemote: TripRemote): Result<TripResponse> {
-        return try {
-            val resp = api.uploadTrip(tripRemote)
-            if (resp.isSuccessful) Result.success(resp.body()!!)
-            else Result.failure(Exception("Error ${resp.code()}"))
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    fun getAllTrips() = db.tripDao().getAllTrips()
+    fun getAllTrips(): Flow<List<Trip>>
 
-    suspend fun getUnsyncedTrips() = db.tripDao().getUnsyncedTrips()
+    suspend fun saveTrip(trip: Trip)
+
+    fun getTripById(tripId: String): Flow<Trip?>
+
+    suspend fun getUnsyncedTrips(): List<Trip>
+
+    suspend fun markTripAsSynced(tripId: String)
+
+    suspend fun updateLiveScore(newScoreValue: Int)
+
+    // 👇 2. AÑADE ESTAS DOS NUEVAS FUNCIONES AL FINAL
+    /**
+     * Guarda un evento específico (ej. penalización) en la base de datos.
+     */
+    suspend fun saveTripEvent(event: TripEvent)
+
+    /**
+     * Obtiene una lista "viva" (Flow) de todos los eventos para un viaje concreto.
+     */
+    fun getEventsForTrip(tripId: String): Flow<List<TripEvent>>
+    fun getLiveScore(): Flow<Int?>
 }

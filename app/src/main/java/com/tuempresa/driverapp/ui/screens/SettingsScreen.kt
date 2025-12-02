@@ -1,3 +1,4 @@
+// ruta: C:/Users/Nancy/AndroidStudioProjects/DriverApp/app/src/main/java/com/tuempresa/driverapp/ui/screens/SettingsScreen.kt.
 package com.tuempresa.driverapp.ui.screens
 
 import androidx.compose.foundation.clickable
@@ -12,18 +13,42 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext // <-- ¡Importante!
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.tuempresa.driverapp.data.managers.BiometricAuthManager // <-- ¡Importante!
+import com.tuempresa.driverapp.data.managers.BiometricAuthStatus // <-- ¡Importante!
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
-    // Estados de ejemplo para los interruptores. En una app real, vendrían de un ViewModel o SharedPreferences.
-    var useBiometrics by remember { mutableStateOf(true) }
+fun SettingsScreen(
+    onLogoutSuccess: () -> Unit,
+    onNavigateToEditProfile: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val uiState = viewModel.uiState
+    val isBiometricsEnabled by viewModel.isBiometricsEnabled.collectAsState()
+
+    // 👇 1. Obtenemos el contexto actual y creamos el manager aquí
+    val context = LocalContext.current
+    val biometricAuthManager = remember { BiometricAuthManager(context) }
+    val isBiometricAvailable = remember { biometricAuthManager.checkBiometricSupport() }
+
+    LaunchedEffect(uiState.logoutSuccess) {
+        if (uiState.logoutSuccess) {
+            onLogoutSuccess()
+        }
+    }
+
     var autoSync by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Ajustes") }) }
+        topBar = { TopAppBar(title = { Text("Ajustes")},colors = TopAppBarDefaults.topAppBarColors(
+            // 👇 ESTA LÍNEA ES LA CAUSA
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
+        ) ) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -38,16 +63,37 @@ fun SettingsScreen() {
                     title = "Editar Perfil",
                     subtitle = "Actualiza tu nombre, foto y vehículo",
                     icon = Icons.Default.Person,
-                    onClick = { /* TODO: Navegar a la pantalla de perfil */ }
+                    onClick = onNavigateToEditProfile
                 )
                 Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsSwitchItem(
-                    title = "Acceso con huella",
-                    subtitle = "Usa tu huella para iniciar sesión",
-                    icon = Icons.Default.Fingerprint,
-                    checked = useBiometrics,
-                    onCheckedChange = { useBiometrics = it }
-                )
+
+                // 👇 2. La lógica de visibilidad ahora usa la variable local
+                if (isBiometricAvailable) {
+                    SettingsSwitchItem(
+                        title = "Acceso con huella",
+                        subtitle = "Usa tu huella para iniciar sesión",
+                        icon = Icons.Default.Fingerprint,
+                        checked = isBiometricsEnabled,
+                        // 👇 3. La lógica de cambio ahora está aquí en la UI
+                        onCheckedChange = { isEnabled ->
+                            if (isEnabled) {
+                                // Si se activa, muestra el diálogo
+                                biometricAuthManager.showBiometricPrompt(
+                                    title = "Confirmar para activar",
+                                    subtitle = "Usa tu huella para habilitar el acceso biométrico"
+                                ) { status ->
+                                    if (status == BiometricAuthStatus.SUCCESS) {
+                                        // Si es exitoso, le decimos al ViewModel que guarde el estado
+                                        viewModel.setBiometricsEnabled(true)
+                                    }
+                                }
+                            } else {
+                                // Si se desactiva, simplemente guardamos el estado
+                                viewModel.setBiometricsEnabled(false)
+                            }
+                        }
+                    )
+                }
             }
 
             // Separador entre secciones
@@ -68,7 +114,7 @@ fun SettingsScreen() {
                     title = "Forzar sincronización",
                     subtitle = "Sube todos los viajes pendientes ahora",
                     icon = Icons.Default.CloudUpload,
-                    onClick = { /* TODO: Llamar a la función de sincronización del ViewModel */ }
+                    onClick = { /* TODO */ }
                 )
             }
 
@@ -81,15 +127,18 @@ fun SettingsScreen() {
                     title = "Cerrar Sesión",
                     subtitle = "Finalizarás tu sesión actual en este dispositivo",
                     icon = Icons.Default.Logout,
-                    titleColor = MaterialTheme.colorScheme.error, // Color distintivo para acción peligrosa
-                    onClick = { /* TODO: Implementar lógica de cerrar sesión */ }
+                    titleColor = MaterialTheme.colorScheme.error,
+                    onClick = { viewModel.logout() }
                 )
             }
         }
     }
 }
 
-// Composable para los encabezados de sección
+// ======================================================================
+// LOS COMPOSABLES DE ABAJO ESTÁN PERFECTOS Y NO NECESITAN NINGÚN CAMBIO
+// ======================================================================
+
 @Composable
 fun SettingsHeader(title: String) {
     Text(
@@ -101,7 +150,6 @@ fun SettingsHeader(title: String) {
     )
 }
 
-// Composable para una fila de ajuste estándar (navegación)
 @Composable
 fun SettingsItem(
     title: String,
@@ -127,7 +175,8 @@ fun SettingsItem(
     }
 }
 
-// Composable para una fila de ajuste con un interruptor
+// En C:/Users/Nancy/AndroidStudioProjects/DriverApp/app/src/main/java/com/tuempresa/driverapp/ui/screens/SettingsScreen.kt.
+
 @Composable
 fun SettingsSwitchItem(
     title: String,
@@ -137,18 +186,35 @@ fun SettingsSwitchItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
+        // 👇 1. ELIMINAMOS el .clickable de aquí.
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) } // Permite hacer clic en toda la fila
-            .padding(16.dp),
+            .padding(16.dp), // Dejamos el padding
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = icon, contentDescription = title, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        // Colocamos el Column y el Switch dentro de un Row secundario
+        // para que el clic solo afecte a esa área y no a todo el espacio.
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // 👇 2. ESTE ES AHORA EL ÚNICO RESPONSABLE DEL CAMBIO
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
+

@@ -1,5 +1,8 @@
+// ruta: C:/Users/Nancy/AndroidStudioProjects/DriverApp/app/src/main/java/com/tuempresa/driverapp/ui/screens/HistoryScreen.kt.
 package com.tuempresa.driverapp.ui.screens
 
+// 👇 1. IMPORTA 'clickable' PARA HACER LAS TARJETAS INTERACTIVAS
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // <-- CORRECCIÓN #1: Import correcto
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,16 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.tuempresa.driverapp.data.local.models.Trip // Asegúrate que el import es correcto
+import com.tuempresa.driverapp.data.local.models.Trip
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    viewModel: HistoryViewModel = hiltViewModel() // Inyectamos el ViewModel
+    viewModel: HistoryViewModel = hiltViewModel(),
+    // 👇 2. AÑADE UN PARÁMETRO PARA RECIBIR LA ACCIÓN DE NAVEGACIÓN
+    // Este lambda recibirá el ID del viaje que fue pulsado.
+    onTripClick: (String) -> Unit
 ) {
-    // Observamos el StateFlow del ViewModel. La UI se actualizará sola.
     val trips by viewModel.allTrips.collectAsState()
 
     Scaffold(topBar = { TopAppBar(title = { Text("Historial de Viajes") }) }) { padding ->
@@ -56,10 +61,12 @@ fun HistoryScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // CORRECCIÓN #2: 'key' es para mejorar el rendimiento.
-                // Ahora funcionará porque el import es correcto.
                 items(items = trips, key = { trip -> trip.id }) { trip ->
-                    TripCard(trip = trip)
+                    // 👇 3. PASA LA ACCIÓN DE CLICK A LA TARJETA
+                    TripCard(
+                        trip = trip,
+                        onClick = { onTripClick(trip.id) } // Cuando se pulse, llama al lambda con el ID del viaje
+                    )
                 }
             }
         }
@@ -67,11 +74,19 @@ fun HistoryScreen(
 }
 
 @Composable
-fun TripCard(trip: Trip) {
+fun TripCard(
+    trip: Trip,
+    // 👇 4. AÑADE EL PARÁMETRO 'onClick' A LA TARJETA
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            // 👇 5. APLICA EL MODIFICADOR 'clickable'
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
+        // El contenido de la tarjeta no cambia en absoluto.
         Column(modifier = Modifier.padding(16.dp)) {
             val sdf = SimpleDateFormat("dd 'de' MMMM 'de' yyyy, HH:mm", Locale.getDefault())
             val formattedDate = sdf.format(Date(trip.startTs))
@@ -82,7 +97,6 @@ fun TripCard(trip: Trip) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
-            // Usamos finalScore de tu modelo Trip
             Text("Puntaje obtenido: ${trip.finalScore}")
             Text("Duración: ${trip.timeActiveSeconds / 60} minutos")
         }
